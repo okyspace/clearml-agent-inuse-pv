@@ -1,0 +1,7 @@
+imageCredentials:
+  username: "REGISTRY_USERNAME"
+  password: "REGISTRY_PASSWORD"
+
+clearml:
+  agentk8sglueKey: "AGENTK8SGLUEKEY"
+  agentk8sglueSecret: "AGENTK8SGLUESECRET"

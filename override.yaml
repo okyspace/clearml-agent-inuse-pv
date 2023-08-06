@@ -1,0 +1,190 @@
+define: &uid 1000670000
+
+global: 
+  imageRegistry: "docker.io"
+
+# -- Private image registry configuration
+imageCredentials:
+  # -- Use private authentication mode
+  enabled: true
+  # -- If this is set, chart will not generate a secret but will use what is defined here
+  existingSecret: ""
+  # -- Registry name
+  registry: docker.io
+  # -- Registry username
+  username: okydocker
+  # -- Registry password
+  password: Ongky6085
+
+# -- ClearMl generic configurations
+clearml:
+  # -- Agent k8s Glue basic auth key
+  agentk8sglueKey: "F8Y8PBFQ8LMQ7E14GDOT"
+  # -- Agent k8s Glue basic auth secret
+  agentk8sglueSecret: "V2L5dhIQjMrfVAqiq2jWuPhSA7SypCVnrgv4O43Xo4EQiZMtgQ"
+  # -- ClearML configuration file
+  clearmlConfig: |-
+   agent {
+     package_manager: {
+       force_repo_requirements_txt: true
+       priority_packages: ["wheel", "setuptools"]   
+     }
+   }
+   sdk {
+     aws: {
+       s3: {
+         credentials: [
+           {
+             host: "s3.apps-crc.testing:80"
+             key: "rvBi8NY64K7MPAnN"
+             secret: "LhHhmk9giMVBittBSGvhzIuJHKj1KjGK"
+             verify: "/etc/ssl/certs/ica.crt"
+             secure: false
+           }
+         ]
+       }
+     }
+   }
+
+#*****************************************************
+#**************** agentk8sglue template **************
+#*****************************************************  
+agentk8sglue:
+  # -- Glue Agent number of pods
+  replicaCount: 1
+  # -- service account access every namespace flag
+  serviceAccountClusterAccess: true
+  # -- Enable Debugging logs for Agent pod
+  debugMode: true
+  # -- Reference to Api server url
+  apiServerUrlReference: "http://clearml-clearml-enterprise-apiserver.clearml:8008"
+  # -- Reference to File server url
+  fileServerUrlReference: "http://clearml-clearml-enterprise-fileserver.clearml:8081"
+  # -- Reference to Web server url
+  webServerUrlReference: "http://clearml-clearml-enterprise-webserver.clearml:8080"
+  # -- default container image for ClearML Task pod
+  defaultContainerImage: python:latest
+  # -- file definition for Glue Agent (example in values.yaml comments)
+  fileMounts: 
+    # - name: "pip.conf"
+    #   folderPath: "/etc/"
+    #   fileContent: |-
+    #     [global]
+    #     index-url=http://pypi.repo.cdc.dsta/simple
+    #     trusted-host = pypi.repo.cdc.dsta
+    # - name: "sources.list"
+    #   folderPath: "/etc/apt"
+    #   fileContent: |-
+    #     deb http://ubuntu.repo.cdc.dsta/ubuntu/mirror/archive.ubuntu.com/ubuntu/ bionic main multiverse universe restricted
+    #     deb http://ubuntu.repo.cdc.dsta/ubuntu/mirror/archive.ubuntu.com/ubuntu/ bionic-updates main multiverse universe restricted
+    #     deb http://ubuntu.repo.cdc.dsta/ubuntu/mirror/archive.ubuntu.com/ubuntu/ bionic-security main multiverse universe restricted
+
+  #*****************************************************
+  #******************* basepod template ****************
+  #*****************************************************  
+  # -- base template for pods spawned to consume ClearML Task
+  basePodTemplate:
+    env:
+      - name: HOME
+        value: /tmp
+
+    volumes:
+      - name: "clearml-cache"
+        persistentVolumeClaim:
+          claimName: "clearml-cache-pvc"
+
+    volumeMounts:
+      - name: "clearml-cache"
+        mountPath: /tmp/.clearml/cache
+
+    # -- file definition for pods spawned to consume ClearML Task (example in values.yaml comments)
+    fileMounts:
+      # - name: "pip.conf"
+      #   folderPath: "/etc"
+      #   fileContent: |-
+      #     [global]
+      #     index-url=http://pypi.repo.cdc.dsta/simple
+      #     trusted-host = pypi.repo.cdc.dsta
+      # cert requires to connect to s3 and gitlab
+      - name: "ica.crt"
+        folderPath: "/etc/ssl/certs"
+        fileContent: |-
+          -----BEGIN CERTIFICATE-----
+          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
+          YXlq/JYAkebEvBc8dFICUPlMPQ==
+          -----END CERTIFICATE-----
+
+  # -- Create queues if they don't exist
+  createQueues: true
+
+  #*****************************************************
+  #******* Queue(s) for the agent to monitor ***********
+  #*****************************************************   
+  # -- ClearML queues and related template OVERRIDES used this agent will consume
+  queues:
+    # -- name of the queue will be used for this template
+    queue-public:
+      templateOverrides:
+        resources:
+          requests:
+            cpu: "2"
+            memory: "4Gi"
+            #nvidia.com/gpu: 1
+          limits: 
+            cpu: "4"
+            memory: "8Gi"
+            #nvidia.com/gpu: 1
+    services:
+      templateOverrides:
+        resources:
+          requests:
+            cpu: "2"
+            memory: "4Gi"
+          limits: 
+            cpu: "2"
+            memory: "4Gi"
+
+# -- Sessions internal service configuration
+# sessions:
+#   # -- Enable/Disable sessions portmode WARNING: only one Agent deployment can have this set to true
+#   portModeEnabled: false
+#   # -- Enable/Disable dynamic svc for sessions pods
+#   dynamicSvcs: false
+#   # -- specific annotations for session services
+#   svcAnnotations: {}
+#   # -- service type ("NodePort" or "ClusterIP" or "LoadBalancer")
+#   svcType: "NodePort"
+#   # -- External IP sessions clients can connect to
+#   externalIP: 0.0.0.0
+#   # -- starting range of exposed NodePorts
+#   startingPort: 30000
+#   # -- maximum number of NodePorts exposed
+#   maxServices: 20
+#   # -- set interactive queue tags
+#   setInteractiveQueuesTag: true
